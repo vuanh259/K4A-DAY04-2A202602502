@@ -1,7 +1,303 @@
 {
   "dataset_id": "day04_v3_helpdesk_group",
   "dataset_role": "group",
-  "description": "Template intentionally left empty. The team must write exactly 10 original IT helpdesk cases: 5 single-turn query cases and 5 multi-turn turns cases.",
-  "allowed_failure_types": ["wrong_tool", "wrong_arg_value", "wrong_boundary", "unnecessary_tool", "out_of_scope", "missing_info"],
-  "cases": []
+  "description": "10 original IT helpdesk evaluation cases written by the team: 5 single-turn and 5 multi-turn cases.",
+  "allowed_failure_types": [
+    "wrong_tool",
+    "wrong_arg_value",
+    "wrong_boundary",
+    "unnecessary_tool",
+    "out_of_scope",
+    "missing_info"
+  ],
+  "cases": [
+    {
+      "id": "G01_single_network_device",
+      "phase": "B",
+      "suite": "group",
+      "query": "Kiểm tra riêng kết nối mạng trên laptop LT-318.",
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "LT-318",
+              "check": "network"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "device_network_check",
+        "difficulty": "easy",
+        "what_it_tests": "Trích đúng asset ID và chọn check=network."
+      }
+    },
+    {
+      "id": "G02_single_missing_asset",
+      "phase": "B",
+      "suite": "group",
+      "query": "Kiểm tra VPN trên máy tính của mình giúp nhé.",
+      "failure_type": "missing_info",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "text"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "clarify_missing_asset",
+        "difficulty": "medium",
+        "what_it_tests": "Không được đoán asset ID khi người dùng chưa cung cấp."
+      }
+    },
+    {
+      "id": "G03_single_service_status",
+      "phase": "B",
+      "suite": "group",
+      "query": "Kiểm tra trạng thái email production hiện tại.",
+      "failure_type": "wrong_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "check_service_status",
+            "args": {
+              "service": "email",
+              "environment": "production"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "service_status",
+        "difficulty": "easy",
+        "what_it_tests": "Yêu cầu trạng thái dịch vụ dùng chung phải dùng check_service_status."
+      }
+    },
+    {
+      "id": "G04_single_ticket_confirmation",
+      "phase": "B",
+      "suite": "group",
+      "query": "Tạo ticket mức medium cho lỗi mạng trên LT-240.",
+      "failure_type": "wrong_boundary",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "yes_no"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "confirm_before_write",
+        "difficulty": "medium",
+        "what_it_tests": "Không được tạo ticket trước khi có xác nhận rõ ràng."
+      }
+    },
+    {
+      "id": "G05_single_out_of_scope",
+      "phase": "B",
+      "suite": "group",
+      "query": "Viết giúp mình một bài quảng cáo bán điện thoại.",
+      "failure_type": "out_of_scope",
+      "expect": {
+        "no_tool": true,
+        "behavior": "refuse"
+      },
+      "metadata": {
+        "skill": "out_of_scope",
+        "difficulty": "easy",
+        "what_it_tests": "Yêu cầu không thuộc IT helpdesk phải từ chối và không gọi tool."
+      }
+    },
+    {
+      "id": "G06_multi_correct_asset",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Kiểm tra VPN trên LT-204."
+        },
+        {
+          "role": "user",
+          "content": "À nhầm, máy đúng là LT-318."
+        },
+        {
+          "role": "user",
+          "content": "Kiểm tra VPN trên máy mới đó."
+        }
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "LT-318",
+              "check": "vpn"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "latest_asset_wins",
+        "difficulty": "hard",
+        "what_it_tests": "Agent phải dùng asset ID mới nhất sau khi người dùng sửa."
+      }
+    },
+    {
+      "id": "G07_multi_carry_environment",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Mình muốn kiểm tra email staging."
+        },
+        {
+          "role": "user",
+          "content": "Kiểm tra trạng thái dịch vụ đó giúp mình."
+        }
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "check_service_status",
+            "args": {
+              "service": "email",
+              "environment": "staging"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "carry_environment",
+        "difficulty": "medium",
+        "what_it_tests": "Agent phải nhớ environment staging từ lượt trước."
+      }
+    },
+    {
+      "id": "G08_multi_ticket_payload_change",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Tạo ticket lỗi VPN LT-204 mức medium."
+        },
+        {
+          "role": "user",
+          "content": "Tôi xác nhận."
+        },
+        {
+          "role": "user",
+          "content": "Khoan, đổi priority thành high."
+        },
+        {
+          "role": "user",
+          "content": "Rà lại payload mới trước khi tạo."
+        }
+      ],
+      "failure_type": "wrong_boundary",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "yes_no"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "confirmation_invalidation",
+        "difficulty": "hard",
+        "what_it_tests": "Khi payload thay đổi thì xác nhận cũ phải bị vô hiệu và Agent phải hỏi lại."
+      }
+    },
+    {
+      "id": "G09_multi_parallel_status_device",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "VPN trên LT-240 đang lỗi."
+        },
+        {
+          "role": "user",
+          "content": "Kiểm tra cả máy và trạng thái VPN production."
+        }
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "LT-240",
+              "check": "vpn"
+            }
+          },
+          {
+            "name": "check_service_status",
+            "args": {
+              "service": "vpn",
+              "environment": "production"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "parallel_tools",
+        "difficulty": "hard",
+        "what_it_tests": "Một yêu cầu có cả device evidence và service status phải gọi đủ hai tool, đồng thời giữ đúng check=vpn từ ngữ cảnh trước."
+      }
+    },
+    {
+      "id": "G10_multi_latest_intent",
+      "phase": "B",
+      "suite": "group",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Kiểm tra toàn bộ laptop LT-240."
+        },
+        {
+          "role": "user",
+          "content": "Không cần toàn bộ nữa."
+        },
+        {
+          "role": "user",
+          "content": "Chỉ kiểm tra network thôi."
+        }
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "inspect_device",
+            "args": {
+              "asset_id": "LT-240",
+              "check": "network"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "skill": "latest_intent_wins",
+        "difficulty": "hard",
+        "what_it_tests": "Ý định mới nhất phải ghi đè yêu cầu check=all ban đầu."
+      }
+    }
+  ]
 }

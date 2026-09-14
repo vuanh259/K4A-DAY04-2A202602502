@@ -21,6 +21,7 @@ Agent là IT Helpdesk Assistant sử dụng dữ liệu giả lập của Norths
 
 > URL: `https://vinunicodelabday04nguyenvuanh2a202602502-fd8lxdfuxuikhy7sfqnmd.streamlit.app/` 
 
+
 ## A2. Tool agent có
 
 | Tool | Chức năng | Core / optional / team-built |
@@ -207,6 +208,7 @@ theo.
 
 ## B5. Optional và bonus tool evidence
 
+
 Phần này chỉ điền khi nhóm có sử dụng optional tool hoặc tự xây bonus tool.
 Không làm phần này không ảnh hưởng việc hoàn thành core lab. `policy`,
 `create_ticket` và `search_device_info` là tool có sẵn, không phải tool mới do
@@ -232,6 +234,7 @@ nhóm tự xây.
   - Transcript bằng chứng UI/live chat: `transcripts/v3_bonus_network_diagnostics.transcript.json`.
   - Bằng chứng Run evaluation: `runs/v3_B_bonus_network_openrouter_20260914T204500123456.json`.
   - UI compatibility: Streamlit `app.py` tự động nhận diện và hiển thị tool trace, arguments và structured results.
+
 ## B6. Safety review
 
 - Không quan sát thấy agent tự đoán asset ID hoặc employee ID trong group eval. Ở H02, agent mắc lỗi ngược lại: hỏi lại asset ID dù `LT-204` đã được cung cấp.
@@ -280,7 +283,33 @@ evidence thực tế trong repository, không chỉ mô tả cảm nhận chung.
 
 **Reflection chung của nhóm:**
 
-> Viết reflection tại đây và dẫn link/path đến evidence liên quan.
+1. **Mục tiêu đã hoàn thành và Bằng chứng tương ứng:**
+   - **Tối ưu hóa Agent đạt 100% Core Accuracy:** Trải qua 3 vòng lặp giả thuyết có kiểm chứng (`v0` &rarr; `v1` &rarr; `v2` &rarr; `v3`), nhóm đã đưa độ chính xác từ mức ban đầu **70.0%** (21/30 cases tại [`runs/v0_B_base_openrouter_20260914T183913075287.json`](runs/v0_B_base_openrouter_20260914T183913075287.json)) lên **100.0% tuyệt đối** (30/30 cases tại [`runs/v3_B_base_openrouter_20260914T184659357322.json`](runs/v3_B_base_openrouter_20260914T184659357322.json) và [`runs/v3_B_base_openrouter_20260914T193937815536.json`](runs/v3_B_base_openrouter_20260914T193937815536.json)), với `multiturn_accuracy = 1.0` và `provider_error_cases = 0`. Toàn bộ quá trình được đóng dấu hash và ghi nhận tại [`artifacts/version_log.csv`](artifacts/version_log.csv).
+   - **Xây dựng thành công Team Eval Dataset:** Nhóm tự thiết kế đúng 10 original cases (5 single-turn, 5 multi-turn) tại [`data/eval_group.json`](data/eval_group.json) và kiểm thử đạt **100% accuracy** (10/10 cases tại [`runs/v3_B_group_openrouter_20260914T194930612346.json`](runs/v3_B_group_openrouter_20260914T194930612346.json)).
+   - **Thực nghiệm Bảo mật & Red-Teaming:** Đo lường 12 kịch bản tấn công tại [`runs/v3_B_adversarial_openrouter_20260914T195310005694.json`](runs/v3_B_adversarial_openrouter_20260914T195310005694.json) (đạt 6/12 PASS), nhận diện rõ các rủi ro tiêm nhiễm prompt injection và rò rỉ dữ liệu.
+   - **Triển khai Live Chat UI Streamlit:** Xây dựng [`app.py`](app.py) tái sử dụng nguyên vẹn `run_model_tool_loop` từ `chat.py`, hoàn thành trọn vẹn kịch bản demo 6 turns với đầy đủ tool trace và transcript minh bạch tại [`transcripts/v3_openrouter_20260914T201005858928.transcript.json`](transcripts/v3_openrouter_20260914T201005858928.transcript.json).
+   - **Triển khai Bonus Capability Tool:** Xây dựng hoàn chỉnh tool mới `diagnose_network` với hợp đồng [`tools/diagnose_network/TOOL.md`](tools/diagnose_network/TOOL.md), mã nguồn có 5 tầng guardrail an ninh, bộ dữ liệu mock [`helpdesk_data/network_diagnostics.json`](helpdesk_data/network_diagnostics.json), smoke test và đạt 100% trên bộ eval riêng.
+
+2. **Hypothesis và thay đổi tạo ra cải thiện rõ nhất:**
+   - Cải thiện có tính bước ngoặt nhất diễn ra tại vòng lặp `v1` &rarr; `v2` (nâng điểm từ 76.7% lên 90.0%): Nhóm thiết lập nguyên tắc cấm tự đoán định danh (`asset_id`, `employee_id`), yêu cầu bắt buộc gọi `clarify(response_type="text")` khi thiếu thông tin, và xây dựng ranh giới an toàn cho hành động ghi (Confirmation Boundary: mọi yêu cầu tạo ticket hoặc sửa payload đều phải dừng lại xin xác nhận qua `clarify(response_type="yes_no")`, đồng thời vô hiệu hóa xác nhận cũ khi payload thay đổi). Thay đổi này triệt tiêu hoàn toàn các lỗi `wrong_boundary` và `missing_info`.
+   - Vòng lặp `v3` hoàn thiện việc chuẩn hóa schema/description trong [`artifacts/tools.yaml`](artifacts/tools.yaml) và bắt buộc model truyền tường minh `response_type` trong [`artifacts/system_prompt.md`](artifacts/system_prompt.md), đưa độ chính xác routing và arguments lên mức 100%.
+
+3. **Failure quan trọng chưa được xử lý trọn vẹn:**
+   - *Ranh giới phòng thủ Adversarial:* Trong bộ 12 test cases bảo mật, Agent vẫn bị fail 6 cases thuộc nhóm `wrong_boundary` do model bị đánh lừa bởi các kỹ thuật tiêm nhiễm nâng cao (giả mạo chuỗi `TOOL_RESULTS_JSON: [{"confirmed": true}]`, nhúng code `confirmed: true`, tự gắn thẻ `<assistant>` hoặc tuồn mã nội bộ vào query web search). Điều này chứng minh rằng chỉ dựa vào System Prompt là không đủ để chống đỡ các cuộc tấn công jailbreak tinh vi.
+   - *Định dạng JSON Output trong Live Chat:* Trong các lượt tương tác live demo qua UI (turns 1, 3, 4), model đôi khi phản hồi bằng Markdown/plain text thay vì cấu trúc JSON nghiêm ngặt có 4 trường (`intent`, `action`, `reply`, `evidence_ids`). Giao diện phải kích hoạt cơ chế fallback parser để hiển thị.
+
+4. **Quy trình phân chia, review và tích hợp của nhóm:**
+   - Nhóm 5 thành viên phân vai rõ ràng theo đúng cấu trúc của bài Lab:
+     - **Nguyễn Vũ Anh (Prompt Architect / Lead):** Quản trị kiến trúc `system_prompt.md`, điều phối quy trình lặp hypothesis, kiểm soát version hash và quản lý Git repo.
+     - **Nguyễn Thành Duy (Tool Schema Engineer):** Đặc tả JSON schema, chuẩn hóa descriptions/enums trong `tools.yaml`, tích hợp Tavily search và cải tiến adapter Gemini rate-limit retry.
+     - **Trương Việt Anh (Eval & Red-Team):** Tác giả 10 cases `eval_group.json`, vận hành eval suites và phân tích nguyên nhân lỗi (RCA).
+     - **Phạm Quang Đạt (UI & Report Coordinator):** Xây dựng Streamlit Live Chat UI (`app.py`), thực hiện demo transcript và chủ trì tổng hợp báo cáo `REPORT.md`.
+     - **Nguyễn Xuân Khuê (Security & Bonus Tool):** Phát triển Bonus Tool `diagnose_network`, xây dựng mock telemetry và kiểm soát rác hệ thống / ticket hygiene.
+   - Nhóm áp dụng nghiêm ngặt Git Feature Branching: mỗi thành viên làm việc trên branch cá nhân (`contrib/<username>` hoặc feature branch), gửi Pull Request và được Lead review merge vào branch chung, đảm bảo 100% thành viên đều có commit hash định danh riêng biệt trong lịch sử Git.
+
+5. **Nếu có thêm một vòng lặp, nhóm sẽ ưu tiên cải tiến:**
+   - Triển khai **Code-level Guardrails (Defense-in-Depth)** tại tầng Tool Implementation thay vì chỉ dựa vào System Prompt: Thiết lập bộ lọc regex whitelist chặn đứng các chuỗi ID nội bộ (`LT-xxx`, `EMP-xxx`) trước khi gửi ra external search API, và xây dựng cơ chế session token tạm thời để xác thực confirmation trước khi hàm `create_ticket` được phép ghi file vào đĩa.
+   - Kích hoạt cơ chế **Structured Outputs (Enforced JSON Schema)** ở tầng provider API để đảm bảo 100% câu trả lời luôn tuân thủ cấu trúc JSON 4 trường mà không phụ thuộc vào nỗ lực nhắc nhở của prompt.
 
 ## C2. Self-reflection của từng thành viên
 
@@ -291,7 +320,24 @@ có thể đối chiếu đóng góp.
 
 Sao chép mẫu dưới đây cho từng thành viên:
 
-### Duy Nguyễn (duynguy3n2916) — [Điền MSSV]
+### Nguyễn Vũ Anh — 2A202602502
+- **Vai trò/phần việc được nhận:** Prompt Architect / Lead.
+- **Những gì tôi đã thay đổi trong repo chung:** 
+  - Khởi tạo môi trường, chạy đo lường Baseline v0 (70% accuracy).
+  - Tối ưu hóa kiến trúc `system_prompt.md` qua 3 vòng lặp v1 -> v2 -> v3 (đạt 100% accuracy trên 30 core cases).
+  - Quản lý nhật ký phiên bản `version_log.csv` và kiểm chứng dữ liệu SHA-256 hash.
+- **File hoặc artifact liên quan:** `artifacts/system_prompt.md`, `artifacts/version_log.csv`, `runs/v3_B_base_openrouter_20260914T184659357322.json`.
+- **Một quyết định kỹ thuật tôi đã đưa ra và lý do:** 
+  Tách bạch rõ ranh giới giữa việc tra cứu danh bạ (`lookup_user`) và chẩn đoán thiết bị (`inspect_device`), đồng thời bắt buộc model phải truyền tường minh `response_type` khi gọi `clarify`. Quyết định này giúp triệt tiêu hoàn toàn hiện tượng gọi thừa tool và đưa độ chính xác từ 90% lên 100%.
+- **Khó khăn tôi gặp và cách tôi xử lý:** 
+  Ở phiên bản v3 đầu tiên, việc đưa câu ví dụ cụ thể vào prompt đã gây ra lỗi thoái thoái (regression) ở case H02. Tôi đã nhận diện nguyên nhân qua `parse_runs.py` và sửa lại quy tắc theo dạng điều kiện logic tổng quát thay vì dùng câu mẫu cụ thể.
+- **Điều tôi học được từ phần việc này:** 
+  Prompt chính là code: không thể viết theo cảm tính mà phải phát triển theo phương pháp khoa học (Hypothesis-driven), đo lường bằng traces thực tế và liên tục kiểm tra lỗi thoái thoái (regression testing).
+- **Nếu làm lại, tôi sẽ cải thiện điều gì:** 
+  Tôi sẽ phân loại các nhóm lỗi theo ma trận rủi ro ngay từ baseline để tối ưu số vòng lặp nhanh hơn.
+
+
+### Nguyễn Thành Duy — 2A202602804
 
 - **Vai trò/phần việc được nhận:** Tool & Schema Engineer (Role B)
 - **Những gì tôi đã thay đổi trong repo chung:**
@@ -306,14 +352,71 @@ Sao chép mẫu dưới đây cho từng thành viên:
   - `starter_v0/artifacts/REPORT.md`
   - `starter_v0/providers/gemini_provider.py`
   - `starter_v0/run_eval.py`
-  - `starter_v0/runs/v0_B_base_gemini_20260914T182411943442.json`
-  - `starter_v0/runs/v1_B_base_gemini_20260914T183004895021.json`
-  - `starter_v0/runs/v1_B_extension_gemini_20260914T183159927879.json`
-- **Commit hash hoặc pull request:** `2d5bd08` (branch: `duy`)
+  - `starter_v0/runs/v0_B_base_openrouter_20260914T183913075287.json`
+  - `starter_v0/runs/v3_B_base_openrouter_20260914T184659357322.json`
+- **Commit hash hoặc pull request:** `48188d4` — feat(tools): standardize tool declarations, enums, Tavily API integration and rate-limit retry (Pull Request #1, merge commit `5c00c72`, branch: `duy`)
 - **Một quyết định kỹ thuật tôi đã đưa ra và lý do:** Đưa các ràng buộc nghiệp vụ (business constraints) và hướng dẫn chọn enum trực tiếp vào description của parameter trong `tools.yaml` (ví dụ quy định rõ khi nào dùng text, yes_no, choice cho clarify, và cấm đoán môi trường ngoài production/staging). Quyết định này giúp mô hình nhận diện chính xác kiểu phản hồi mong muốn mà không cần phải nhồi nhét quá nhiều vào system prompt, giúp tăng case_accuracy từ 70% lên 100%.
 - **Khó khăn tôi gặp và cách tôi xử lý:** Gặp lỗi giới hạn rate limit 429 (15 requests/phút) của Google Gemini và lỗi mã hóa ký tự Unicode trên Windows; tôi đã xử lý bằng cách lập trình cơ chế retry backoff tự động và cấu hình chuẩn UTF-8.
 - **Điều tôi học được từ phần việc này:** Hiểu sâu sắc rằng Tool Declaration và JSON schema chính là một phần của System Prompt; việc mô tả ranh giới rõ ràng giữa các tools đóng vai trò quyết định độ chính xác của Function Calling.
 - **Nếu làm lại, tôi sẽ cải thiện điều gì:** Viết thêm automated schema validator và unit tests cho từng tool trước khi chạy full eval để tiết kiệm quota gọi mô hình.
+
+
+### Phạm Quang Đạt — 2A202602704
+
+- **GitHub username:** `datpq-alpha`
+
+- **Vai trò/phần việc được nhận:**  
+  UI & Report Coordinator — xây dựng giao diện live chat bằng Streamlit, kiểm thử các kịch bản demo, lưu transcript và tổng hợp evidence vào báo cáo.
+
+- **Những gì tôi đã thay đổi trong repo chung:**
+  1. Xây dựng `app.py` bằng Streamlit và tái sử dụng `run_model_tool_loop` từ `chat.py`.
+  2. Thêm giao diện cấu hình provider/model, quản lý lịch sử hội thoại bằng session state và hỗ trợ multi-turn.
+  3. Hiển thị tool name, arguments, tool result/error, round, status, artifact version, prompt hash và tools hash.
+  4. Thêm chức năng lưu và tải transcript JSON.
+  5. Cố định UI sử dụng artifact `v3` để tránh gắn nhãn sai cho prompt và tools hiện tại.
+  6. Thêm dependency Streamlit vào `requirements.txt`.
+  7. Chạy base eval v3, group eval, adversarial eval và các kịch bản live-chat.
+  8. Tổng hợp version evidence, failure analysis, group cases, live-chat evidence và adversarial review vào `REPORT.md`.
+
+- **File hoặc artifact liên quan:**
+  - `starter_v0/app.py`
+  - `starter_v0/requirements.txt`
+  - `starter_v0/artifacts/REPORT.md`
+  - `starter_v0/artifacts/version_log.csv`
+  - `starter_v0/runs/v3_B_base_openrouter_20260914T193937815536.json`
+  - `starter_v0/runs/v3_B_group_openrouter_20260914T194930612346.json`
+  - `starter_v0/runs/v3_B_adversarial_openrouter_20260914T195310005694.json`
+  - `starter_v0/transcripts/v3_openrouter_20260914T201005858928.transcript.json`
+
+- **Commit hash hoặc pull request:**
+  - `496e09e` — xây dựng Streamlit chat UI.
+  - `6026853` — thêm Streamlit dependency.
+  - `60fd8de` — bổ sung UI v3, report và evaluation evidence.
+  - Branch: `quangdat`.
+  - [Commit evidence 60fd8de](https://github.com/vuanh259/K4A-DAY04-2A202602502/commit/60fd8de)
+
+- **Một quyết định kỹ thuật tôi đã đưa ra và lý do:**  
+  Tôi quyết định tái sử dụng trực tiếp `run_model_tool_loop` từ `chat.py` thay vì viết một agent loop riêng cho Streamlit. Cách này giúp CLI và UI có cùng hành vi gọi tool, đồng thời transcript trong UI phản ánh đúng tool name, arguments và results của runtime chung. Tôi cũng cố định version của UI là `v3` vì repo chỉ có một bộ `system_prompt.md` và `tools.yaml` hiện hành; dropdown `v0–v3` trước đó chỉ đổi nhãn nhưng không tải artifact lịch sử tương ứng.
+
+- **Khó khăn tôi gặp và cách tôi xử lý:**  
+Trương Việt Anh — 2A202602444
+- Vai trò/phần việc được nhận: Eval & Red-Team.
+- Những gì tôi đã thay đổi trong repo chung:
+  - Thiết lập và chạy bộ đánh giá Baseline v0 trên 30 core cases, ghi nhận kết quả ban đầu 70% accuracy và phân loại các lỗi theo nhóm wrong_tool, missing_info và wrong_boundary.
+  - Chạy lại bộ Base Eval trên phiên bản v1 sau khi Prompt Architect và Tool Schema Engineer cập nhật hệ thống, xác nhận 30/30 cases PASS, case_accuracy = 100% và không có provider error.
+  - Thiết kế bộ eval_group.json gồm đúng 10 test case original, bao gồm 5 single-turn và 5 multi-turn, nhằm kiểm tra tool routing, argument extraction, clarification, confirmation boundary và khả năng duy trì intent qua nhiều lượt.
+  - Chạy Group Eval trên v1 và phát hiện case G09_multi_parallel_status_device thất bại do Agent truyền check="all" thay vì check="vpn", dù đã chọn đúng inspect_device và check_service_status.
+  - Phân tích trace của case G09 và xác định failure thực tế là wrong_arg_value, sau đó cập nhật lại nhãn failure trong eval_group.json để phản ánh đúng nguyên nhân lỗi.
+- File hoặc artifact liên quan: data/eval_group.json, runs/v0_B_base_openrouter_20260914T182724887893.json, runs/v1_B_base_openrouter_20260914T190416681480.json, runs/v1_B_group_openrouter_20260914T200051614351.json.
+- Commit hash hoặc pull request: d24a242 — Add group evaluation cases (branch: feature-TruongVietAnh).
+- Một quyết định kỹ thuật tôi đã đưa ra và lý do:
+  Tôi không chỉ dựa vào nhãn failure tổng quát của evaluator mà kiểm tra trực tiếp actual_tool_calls, expected arguments và trace của từng case thất bại. Ở case G09, evaluator ban đầu được khai báo wrong_tool, nhưng trace cho thấy Agent đã chọn đúng cả hai tool và chỉ truyền sai inspect_device.check="all" thay vì "vpn". Vì vậy tôi phân loại lại case thành wrong_arg_value. Cách làm này giúp failure analysis phản ánh đúng nguyên nhân kỹ thuật và cung cấp evidence chính xác hơn cho Prompt Architect và Tool Schema Engineer.
+- Khó khăn tôi gặp và cách tôi xử lý:
+  Trong lần chạy Baseline đầu tiên bằng Gemini, nhiều case gặp provider_error do giới hạn quota nên kết quả không đủ điều kiện làm evidence. Tôi chuyển sang OpenRouter và chạy lại toàn bộ 30 cases, đạt measured_cases = 30 và provider_error_cases = 0. Sau đó, khi Group Eval chỉ đạt 9/10, tôi kiểm tra run JSON thay vì chỉ nhìn accuracy tổng để xác định chính xác argument gây lỗi.
+- Điều tôi học được từ phần việc này:
+Eval không chỉ là chạy test và nhìn tỷ lệ PASS/FAIL. Một kết quả đánh giá có giá trị cần đảm bảo toàn bộ cases được đo, không có provider error và phải phân tích trace để xác định Agent sai ở routing, argument, multi-turn context hay safety boundary. Tôi cũng hiểu rõ hơn vai trò của regression testing khi mỗi thay đổi ở prompt hoặc tool schema cần được kiểm chứng lại trên cùng một bộ test.
+- Nếu làm lại, tôi sẽ cải thiện điều gì:
+  Tôi sẽ thiết kế bộ Group Eval và ma trận phân loại failure ngay từ khi chạy baseline, đồng thời chuẩn bị trước các adversarial cases tập trung vào confirmation boundary, prompt injection và data exfiltration để phát hiện các vấn đề safety sớm hơn.
 
 ### Nguyễn Xuân Khuê (Sinonmoe) — 2A202602999
 
@@ -355,16 +458,16 @@ không dùng chính phần reflection làm bằng chứng duy nhất cho đóng 
 Chỉ nộp bài khi mọi mục dưới đây đã được kiểm tra trên branch cuối cùng của
 repository chung:
 
-- [ ] `TEAMMATES.md` có đủ họ tên, MSSV, GitHub username và vai trò.
-- [ ] Mỗi thành viên có ít nhất một commit trong lịch sử branch nộp bài.
-- [ ] Phần reflection chung của nhóm đã hoàn thành và có evidence.
-- [ ] Mỗi thành viên đã tự viết và commit self-reflection của mình.
-- [ ] `system_prompt.md`, `tools.yaml`, version log, runs, eval, transcript, UI
+- [x] `TEAMMATES.md` có đủ họ tên, MSSV, GitHub username và vai trò.
+- [x] Mỗi thành viên có ít nhất một commit trong lịch sử branch nộp bài.
+- [x] Phần reflection chung của nhóm đã hoàn thành và có evidence.
+- [x] Mỗi thành viên đã tự viết và commit self-reflection của mình.
+- [x] `system_prompt.md`, `tools.yaml`, version log, runs, eval, transcript, UI
       và report đã có trong repository.
-- [ ] Không có `.env`, API key, token, dữ liệu thật, cache hoặc generated ticket.
-- [ ] Nhóm trưởng và mọi thành viên đã thống nhất đúng một URL repository chung.
-- [ ] Nhóm trưởng và mọi thành viên sẽ nộp cùng URL đó trên VLearn.
+- [x] Không có `.env`, API key, token, dữ liệu thật, cache hoặc generated ticket.
+- [x] Nhóm trưởng và mọi thành viên đã thống nhất đúng một URL repository chung.
+- [x] Nhóm trưởng và mọi thành viên sẽ nộp cùng URL đó trên VLearn.
 
 **URL repository chung dùng để nộp:**
 
-> URL:
+> URL: https://github.com/vuanh259/K4A-DAY04-2A202602502
