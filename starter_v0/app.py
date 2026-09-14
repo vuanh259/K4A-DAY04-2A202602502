@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import json, os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -27,6 +27,12 @@ TOOLS_PATH = ARTIFACTS_DIR / "tools.yaml"
 TRANSCRIPTS_DIR = ROOT / "transcripts"
 
 load_lab_env(ROOT)
+if not os.getenv("OPENROUTER_API_KEY"):# test xem có api key chưa
+    st.error(
+        "Không tìm thấy OPENROUTER_API_KEY. "
+        "Hãy cấu hình key trong Streamlit Secrets."
+    )
+    st.stop()
 
 st.set_page_config(
     page_title="IT Helpdesk Agent",
